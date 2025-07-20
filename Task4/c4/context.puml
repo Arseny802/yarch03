@@ -1,0 +1,29 @@
+@startuml context_diagram_rates
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title Диаграмма контекста системы управления ставками
+
+Person_Ext(customer, "Клиент банка", "Физическое лицо, запрашивающее информацию о депозитных ставках")
+Person(operator, "Оператор кол-центра", "Сотрудник, консультирующий клиентов по телефону")
+System_Ext(call_center, "Партнёрский кол-центр", "Внешняя система обработки звонков")
+System(rates_system, "Система управления ставками", "Обеспечивает хранение и распространение актуальных ставок")
+
+System_Boundary(boundary1, "Банк Стандарт") {
+  System(api_gw, "API Gateway", "Kong", "Маршрутизация и контроль доступа")
+  System(rate_service, "Rate Service", "Java/Spring", "Управление депозитными ставками")
+  System(redis, "Redis Cluster", "Кэш ставок", "Распределённое кэширование")
+  System(kafka, "Kafka Cluster", "Брокер событий", "Обработка событий изменения ставок")
+  System(file_exporter, "File Exporter", "Python", "Генерация и отправка файлов")
+  System(sftp, "SFTP Server", "vsftpd", "Приём файлов для партнёров")
+}
+
+Rel(customer, operator, "Звонок с вопросом о ставках", "Телефонный звонок")
+Rel(operator, api_gw, "Запрос актуальных ставок", "REST API (HTTPS)")
+Rel(api_gw, redis, "Получение данных из кэша", "Redis Protocol")
+Rel(rate_service, redis, "Обновление кэша", "Pub/Sub")
+Rel(rate_service, kafka, "Публикация событий", "Kafka Protocol")
+Rel(kafka, file_exporter, "Чтение событий об изменении", "Consumer Group")
+Rel(file_exporter, sftp, "Загрузка файлов", "SFTP (SSH)")
+Rel(sftp, call_center, "Получение файлов", "Автоматический импорт")
+
+@enduml

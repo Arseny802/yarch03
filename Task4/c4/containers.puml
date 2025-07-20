@@ -1,0 +1,26 @@
+@startuml container_diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title Диаграмма контейнеров системы
+
+Person(оператор, "Оператор", "Сотрудник кол-центра")
+System_Boundary(boundary1, "Банк 'Стандарт'") {
+  Container(api_gw, "API Gateway", "Kong", "Маршрутизация, аутентификация, rate limiting")
+  Container(rate_service, "Rate Service", "Java 17/Spring Boot", "Ядро бизнес-логики по ставкам")
+  ContainerDb(redis, "Redis", "6.2", "Кэш актуальных ставок")
+  ContainerQueue(kafka, "Kafka", "3.3", "События изменения ставок")
+  Container(file_exporter, "File Exporter", "Python 3.10", "Генерация CSV + PGP шифрование")
+  Container(sftp, "SFTP Server", "vsftpd", "Secure File Transfer")
+}
+
+System_Ext(партнёр_колцентр, "Партнёрский кол-центр", "Внешняя информационная система")
+
+Rel(оператор, api_gw, "Запрос через веб-интерфейс", "HTTPS/JSON")
+Rel(api_gw, rate_service, "Проксирование запросов", "HTTP/2")
+Rel(rate_service, redis, "Кэширование ставок", "Redis Protocol")
+Rel(rate_service, kafka, "Публикация событий", "Kafka Protocol")
+Rel(kafka, file_exporter, "Чтение событий", "Consumer API")
+Rel(file_exporter, sftp, "Загрузка файлов", "SFTP/SSH")
+Rel(sftp, партнёр_колцентр, "Автоматический импорт", "CSV + PGP")
+
+@enduml
