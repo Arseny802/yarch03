@@ -1,0 +1,29 @@
+@startuml context_diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title Контекстная диаграмма кредитного процесса
+
+Person(клиент, "Клиент", "Физическое лицо, подающее заявку на кредит через веб-интерфейс")
+
+System_Boundary(кредитная_система, "Кредитный процесс") {
+    System(веб_интерфейс, "Веб-интерфейс", "React-приложение для взаимодействия с клиентом")
+    System(credit_gateway, "Credit API Gateway", "Kong: Маршрутизация и аутентификация запросов")
+    System(credit_service, "Credit Service", "Java-микросервис для обработки заявок")
+    System(scoring, "Scoring Engine", "Python-сервис ML-скоринга")
+    SystemDb(reporting_db, "Credit Reporting", "PostgreSQL: Хранение кредитной истории")
+}
+
+System_Ext(бки, "БКИ", "Внешние бюро кредитных историй")
+System_Ext(эцп, "Платформа ЭЦП", "Система электронной подписи документов")
+System_Ext(абс, "АБС", "Унаследованная банковская система")
+
+Rel(клиент, веб_интерфейс, "Подает заявку", "HTTPS")
+Rel(веб_интерфейс, credit_gateway, "API-запросы", "REST/JSON")
+Rel(credit_gateway, credit_service, "Обработка данных", "gRPC")
+Rel(credit_service, scoring, "Запрос скоринга", "gRPC")
+Rel(scoring, бки, "Получение кредитной истории", "SOAP/XML")
+Rel(credit_service, эцп, "Подписание договора", "REST/JWT")
+Rel(credit_service, абс, "Синхронизация данных", "Kafka Avro")
+Rel(credit_service, reporting_db, "Сохранение отчётов", "JDBC")
+
+@enduml

@@ -1,0 +1,31 @@
+@startuml container_diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title Диаграмма контейнеров кредитного процесса
+
+Person(customer, "Клиент", "Пользователь кредитного сервиса")
+
+System_Boundary(credit_system, "Кредитный модуль") {
+    Container(web_front, "Веб-интерфейс", "React", "SPA для подачи заявок")
+    Container(credit_gateway, "API Gateway", "Kong", "Маршрутизация и rate limiting")
+    Container(credit_service, "Credit Service", "Java 17", "Оркестрация кредитного процесса")
+    Container(scoring, "Scoring Engine", "Python 3.10", "ML-модели для оценки рисков")
+    ContainerDb(reporting_db, "Credit Reporting", "PostgreSQL 14", "Хранение кредитных отчётов")
+    ContainerQueue(kafka, "Event Bus", "Apache Kafka", "Асинхронная коммуникация")
+}
+
+System_Ext(bki, "БКИ", "Внешние кредитные бюро")
+System_Ext(eds, "ЭЦП-сервис", "Платформа электронной подписи")
+System_Ext(abs, "Core Banking", "Унаследованная АБС")
+
+Rel(customer, web_front, "Взаимодействует с UI", "HTTPS/GraphQL")
+Rel(web_front, credit_gateway, "API-запросы", "REST/HTTPS")
+Rel(credit_gateway, credit_service, "Обработка бизнес-логики", "gRPC")
+Rel(credit_service, scoring, "Расчет кредитного рейтинга", "gRPC/Protobuf")
+Rel(scoring, bki, "Интеграция через адаптер", "SOAP/XML")
+Rel(credit_service, eds, "Подписание документов", "REST/OAuth2")
+Rel(credit_service, kafka, "Публикация событий", "Avro Schema")
+Rel(kafka, abs, "Синхронизация с ядром", "Kafka Connect")
+Rel(credit_service, reporting_db, "Сохранение данных", "JDBC/SSL")
+
+@enduml

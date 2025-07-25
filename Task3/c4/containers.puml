@@ -1,0 +1,64 @@
+@startuml container_diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+
+Container(api_gateway, "API Gateway", "Точка входа в систему, управление API, безопасность")
+Container(load_balancer, "Load Balancer", "Распределение нагрузки между инстансами")
+
+System_Boundary(deposit_ms, "Микросервис депозитов", "Обработка заявок на открытие депозитов") {
+  Container(deposit_logic, "Business Logic", "Бизнес-логика обработки заявок")
+  Container(kafka_client, "Kafka Client", "Интеграция с очередью сообщений")
+  ContainerDb(redis_client, "Redis Client", "Работа с кэшем ставок")
+  Container(auth_module, "Authorization Module", "Модуль аутентификации")
+}
+
+' Компоненты интернет-банка
+System_Boundary(internet_bank, "Интернет-банк", "Личный кабинет клиента") {
+  Container(ib_frontend, "Frontend", "Клиентская часть интернет-банка")
+  Container(ib_backend, "Backend", "Бэкенд интернет-банка")
+  Container(auth_service, "Auth Service", "Сервис аутентификации")
+}
+
+' Компоненты АБС
+System_Boundary(abs, "АБС банка", "Основная банковская система") {
+  Container(abs_core, "Core Banking", "Основной модуль АБС")
+  Container(abs_deposits, "Deposits Module", "Модуль депозитных операций")
+  ContainerDb(abs_db, "Database", "Хранилище данных АБС")
+}
+
+' Компоненты веб-сайта
+System_Boundary(web_site, "Веб-сайт банка", "Публичная часть для новых клиентов") {
+  Container(web_frontend, "Frontend")
+  Container(web_backend, "Backend")
+}
+
+' Дополнительные контейнеры
+Container(sms_service, "СМС-сервис") 
+Container(rate_service, "Rate Management", "Управление ставками депозитов")
+
+' Отношения
+Rel(web_site, api_gateway, "REST API")
+Rel(internet_bank, api_gateway, "REST API")
+
+Rel(api_gateway, load_balancer, "", "HTTP/2")
+Rel(load_balancer, deposit_logic, "Обработка заявок", "gRPC")
+
+Rel(deposit_logic, kafka_client, "Очередь сообщений")
+Rel(deposit_logic, redis_client, "Кэширование ставок")
+Rel(deposit_logic, auth_module, "Авторизация")
+
+Rel(deposit_logic, sms_service, "Отправка SMS")
+Rel(deposit_logic, rate_service, "Получение ставок")
+
+Rel(deposit_logic, abs, "Синхронизация данных")
+
+Rel(rate_service, abs, "Синхронизация ставок")
+
+' Внутренние связи интернет-банка
+Rel(ib_frontend, ib_backend, "API запросы")
+Rel(ib_backend, auth_service, "Аутентификация")
+
+' Внутренние связи веб-сайта
+Rel(web_frontend, web_backend, "API запросы")
+
+@enduml
